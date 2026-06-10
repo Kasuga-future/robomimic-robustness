@@ -1,7 +1,7 @@
 {
-    "algo_name": "flow_rwr",
+    "algo_name": "flow_matching_x",
     "experiment": {
-        "name": "square_flow_rwr_train_visualdr",
+        "name": "square_image_flow_matching_x_video_eval",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -13,7 +13,7 @@
             "enabled": true,
             "every_n_seconds": null,
             "every_n_epochs": null,
-            "epochs": [],
+            "epochs": [150, 200, 250, 300],
             "on_best_validation": false,
             "on_best_rollout_return": false,
             "on_best_rollout_success_rate": false
@@ -21,17 +21,13 @@
         "epoch_every_n_steps": 100,
         "validation_epoch_every_n_steps": 10,
         "env": null,
-        "additional_envs": [
-            "NutAssemblySquareColorPerturb",
-            "NutAssemblySquareCameraPerturb",
-            "NutAssemblySquareVisualOOD"
-        ],
+        "additional_envs": null,
         "render": false,
         "render_video": true,
         "keep_all_videos": true,
         "video_skip": 5,
         "rollout": {
-            "enabled": false,
+            "enabled": true,
             "n": 25,
             "horizon": 400,
             "rate": 50,
@@ -42,11 +38,20 @@
         "ckpt_path": null
     },
     "train": {
-        "data": "datasets/square/ph/image_v15.hdf5",
-        "output_dir": "./final_square_flow_rwr_logs",
-        "normalize_weights_by_ds_size": false,
+        "data": [
+      {
+        "path": "datasets/square/ph/image_v15.hdf5",
+        "weight": 0.6
+      },
+      {
+        "path": "datasets/square/ph/image_v15_train_visualdr.hdf5",
+        "weight": 0.4
+      }
+    ],
+    "output_dir": "./final_square_flow_matching_x_augdata_logs",
+    "normalize_weights_by_ds_size": false,
         "num_data_workers": 0,
-        "hdf5_cache_mode": "all",
+        "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
         "hdf5_load_next_obs": false,
         "hdf5_normalize_obs": false,
@@ -74,20 +79,7 @@
         "batch_size": 128,
         "num_epochs": 300,
         "seed": 1,
-        "max_grad_norm": 1.0,
-        "online": {
-            "checkpoint_path": null,
-            "env_name": "NutAssemblySquareTrainVisualDR",
-            "num_iters": 200,
-            "num_rollout_episodes_per_iter": 10,
-            "num_train_steps_per_iter": 100,
-            "rollout_horizon": 400,
-            "terminate_on_success": true,
-            "demo_batch_ratio": 0.5,
-            "eval_interval": 10,
-            "save_interval": 10,
-            "num_eval_episodes": 10
-        }
+        "max_grad_norm": null
     },
     "algo": {
         "optim_params": {
@@ -131,18 +123,6 @@
             "num_train_timesteps": 100,
             "num_inference_steps": 100,
             "solver": "euler"
-        },
-        "rwr": {
-            "gamma": 0.99,
-            "reward_temperature": 1.0,
-            "min_weight": 0.0,
-            "max_weight": 5.0,
-            "topk_fraction": 0.5,
-            "lambda_online": 1.0,
-            "use_staged_reward": true,
-            "use_segment_level_weighting": true,
-            "success_bonus": 5.0,
-            "advantage_eps": 1e-06
         }
     },
     "observation": {
@@ -179,7 +159,7 @@
             "rgb": {
                 "core_class": "VisualCore",
                 "core_kwargs": {
-                    "feature_dimension": 64,
+                    "feature_dimension": 96,
                     "backbone_class": "ResNet18Conv",
                     "backbone_kwargs": {
                         "pretrained": false,
@@ -187,7 +167,7 @@
                     },
                     "pool_class": "SpatialSoftmax",
                     "pool_kwargs": {
-                        "num_kp": 32,
+                        "num_kp": 48,
                         "learnable_temperature": false,
                         "temperature": 1.0,
                         "noise_std": 0.0

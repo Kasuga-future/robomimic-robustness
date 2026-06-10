@@ -97,11 +97,11 @@
         },
         "unet": {
             "enabled": true,
-            "diffusion_step_embed_dim": 256,
+            "diffusion_step_embed_dim": 384,
             "down_dims": [
-                256,
-                512,
-                1024
+                384,
+                768,
+                1536
             ],
             "kernel_size": 5,
             "n_groups": 8
@@ -112,7 +112,7 @@
         },
         "flow": {
             "num_train_timesteps": 100,
-            "num_inference_steps": 20,
+            "num_inference_steps": 100,
             "solver": "euler"
         }
     },
@@ -150,7 +150,7 @@
             "rgb": {
                 "core_class": "VisualCore",
                 "core_kwargs": {
-                    "feature_dimension": 64,
+                    "feature_dimension": 96,
                     "backbone_class": "ResNet18Conv",
                     "backbone_kwargs": {
                         "pretrained": false,
@@ -158,7 +158,7 @@
                     },
                     "pool_class": "SpatialSoftmax",
                     "pool_kwargs": {
-                        "num_kp": 32,
+                        "num_kp": 48,
                         "learnable_temperature": false,
                         "temperature": 1.0,
                         "noise_std": 0.0

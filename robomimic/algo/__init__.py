@@ -12,3 +12,4 @@ from robomimic.algo.td3_bc import TD3_BC
 from robomimic.algo.diffusion_policy import DiffusionPolicyUNet
 from robomimic.algo.flow_matching import FlowMatchingPolicyUNet
 from robomimic.algo.flow_matching_x import FlowMatchingXPolicyUNet
+from robomimic.algo.flow_rwr import FlowRWRPolicyUNet

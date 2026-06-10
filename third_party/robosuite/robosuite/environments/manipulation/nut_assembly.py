@@ -26,6 +26,78 @@ def _set_object_visual_rgba(mujoco_object, rgba):
             geom.set("rgba", rgba_str)
 
 
+def _sample_square_train_visual_rgba(rng):
+    """
+    Sample a broad train-time nut color while avoiding the fixed blue test
+    colors used by the explicit OOD evaluation variants.
+    """
+    test_colors = (
+        np.array([0.08, 0.24, 0.95]),
+        np.array([0.10, 0.22, 0.95]),
+    )
+    for _ in range(64):
+        rgb = np.array(
+            [
+                rng.uniform(0.18, 0.92),
+                rng.uniform(0.12, 0.82),
+                rng.uniform(0.12, 0.92),
+            ]
+        )
+        if np.max(rgb) - np.min(rgb) < 0.18:
+            continue
+        if any(np.linalg.norm(rgb - ref) < 0.22 for ref in test_colors):
+            continue
+        return [float(rgb[0]), float(rgb[1]), float(rgb[2]), 1.0]
+    return [0.78, 0.48, 0.20, 1.0]
+
+
+def _sample_square_train_agentview_camera(rng):
+    """
+    Sample a train-time external camera that stays away from the fixed camera
+    OOD evaluation settings.
+    """
+    test_positions = (
+        np.array([0.54, -0.12, 1.40]),
+        np.array([0.52, -0.10, 1.38]),
+    )
+    test_quats = (
+        np.array([0.641, 0.299, 0.299, 0.641]),
+        np.array([0.655, 0.267, 0.267, 0.655]),
+    )
+    for _ in range(64):
+        pos = np.array(
+            [
+                rng.uniform(0.47, 0.57),
+                rng.uniform(-0.08, 0.03),
+                rng.uniform(1.30, 1.42),
+            ]
+        )
+        quat = np.array(
+            [
+                rng.uniform(0.60, 0.70),
+                rng.uniform(0.18, 0.33),
+                rng.uniform(0.18, 0.33),
+                rng.uniform(0.60, 0.70),
+            ]
+        )
+        quat = quat / np.linalg.norm(quat)
+        fovy = int(rng.integers(56, 69))
+        if any(np.linalg.norm(pos - ref) < 0.028 for ref in test_positions):
+            continue
+        if any(np.linalg.norm(quat - ref) < 0.05 for ref in test_quats):
+            continue
+        return {
+            "pos": pos,
+            "quat": quat,
+            "attribs": {"fovy": str(fovy)},
+        }
+    return {
+        "pos": np.array([0.50, -0.03, 1.34]),
+        "quat": np.array([0.664, 0.243, 0.243, 0.664]),
+        "attribs": {"fovy": "62"},
+    }
+
+
 def _load_square_nut_variant_model(
     env,
     square_nut_scale=1.0,
@@ -886,6 +958,24 @@ class NutAssemblySquareVisualOOD(NutAssemblySquare):
                 "quat": np.array([0.655, 0.267, 0.267, 0.655]),
                 "attribs": {"fovy": "70"},
             },
+        )
+
+
+class NutAssemblySquareTrainVisualDR(NutAssemblySquare):
+    """
+    Square-task train-time visual domain randomization variant.
+
+    This class is intended for data generation. Each hard reset resamples a
+    fresh appearance / camera combination from a random distribution that is
+    related to, but not identical to, the fixed OOD test variants.
+    """
+
+    def _load_model(self):
+        _load_square_nut_variant_model(
+            env=self,
+            square_nut_rgba=_sample_square_train_visual_rgba(self.rng),
+            table_material="table_mat" if bool(self.rng.integers(0, 2)) else None,
+            agentview_camera=_sample_square_train_agentview_camera(self.rng),
         )
 
 

@@ -68,6 +68,7 @@ def extract_trajectory(
     actions,
     actions_abs,
     done_mode,
+    reset_env_each_demo=False,
     camera_names=None, 
     camera_height=84, 
     camera_width=84,
@@ -87,6 +88,10 @@ def extract_trajectory(
     """
     assert isinstance(env, EnvBase)
     assert states.shape[0] == actions.shape[0]
+
+    # Resample train-time domain randomization envs once per demo if requested.
+    if reset_env_each_demo:
+        env.reset()
 
     # load the initial state
     obs = env.reset_to(initial_state)
@@ -289,6 +294,7 @@ def dataset_states_to_obs(args):
             actions=actions,
             actions_abs=actions_abs,
             done_mode=args.done_mode,
+            reset_env_each_demo=args.reset_env_each_demo,
             camera_names=args.camera_names, 
             camera_height=args.camera_height, 
             camera_width=args.camera_width,
@@ -467,6 +473,12 @@ if __name__ == "__main__":
         "--ignore_stored_model",
         action='store_true',
         help="(optional) ignore per-episode stored MuJoCo XML so rendering uses the currently selected environment class",
+    )
+
+    parser.add_argument(
+        "--reset_env_each_demo",
+        action='store_true',
+        help="(optional) hard-reset the env before each demo so train-time randomization envs resample a fresh domain",
     )
 
     args = parser.parse_args()

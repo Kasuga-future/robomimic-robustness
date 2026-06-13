@@ -46,6 +46,20 @@ bash /home/hejunhao-20251119/mnt/work/robomimic/cpj_cbh/eval_one_model_square.sh
 
 
 
+mkdir -p /media/datasets/yumi/hjh/robo/robomimic/env_log/square/flow_aug_data
+mkdir -p /media/datasets/yumi/hjh/robo/robomimic/env_log/square/flow_aug_data/videos
+
+bash /media/datasets/yumi/hjh/robo/robomimic/robomimic-robustness/eval_scripts/eval_one_model_square.sh \
+  /media/datasets/yumi/hjh/robo/robomimic/robomimic/square_flow_matching_image_eval_logs/final_square_flow_matching_augmented_data/20260611085408/models/model_epoch_200.pth \
+  25 \
+  all \
+  /media/datasets/yumi/hjh/robo/robomimic/env_log/square/flow_aug_data/videos \
+  2>&1 | tee /media/datasets/yumi/hjh/robo/robomimic/env_log/square/flow_aug_data/eval_epoch200_clean_25rollout.log
+
+
+
+
+
 
 
 

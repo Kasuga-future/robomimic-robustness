@@ -403,6 +403,9 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
 
     # shape meta from model dict to get info needed to create model
     shape_meta = ckpt_dict["shape_metadata"]
+    if isinstance(shape_meta, list):
+        shape_meta = shape_meta[0]
+
 
     # maybe restore observation normalization stats
     obs_normalization_stats = ckpt_dict.get("obs_normalization_stats", None)
@@ -471,6 +474,8 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
     # metadata from model dict to get info needed to create environment
     env_meta = ckpt_dict["env_metadata"]
     shape_meta = ckpt_dict["shape_metadata"]
+    if isinstance(shape_meta, list):
+        shape_meta = shape_meta[0]
 
     # create env from saved metadata
     env = EnvUtils.create_env_from_metadata(

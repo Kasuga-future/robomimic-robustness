@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROBOMIMIC_ROOT="${ROBOMIMIC_ROOT:-/mnt/users/hejunhao-20251119/work/robomimic}"
+ROBOMIMIC_ROOT="${ROBOMIMIC_ROOT:-/media/datasets/yumi/hjh/robo/robomimic}"
 AGENT="${1:?usage: eval_one_model.sh /path/to/model.pth [n_rollouts] [suite_or_env]}"
 N_ROLLOUTS="${2:-50}"
 HORIZON="${HORIZON:-400}"

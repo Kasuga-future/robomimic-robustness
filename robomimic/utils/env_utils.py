@@ -228,7 +228,9 @@ def create_env_from_metadata(
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
     env_kwargs["env_name"] = env_name
-    lang = env_meta.get("lang", None)
+    # Disable language embedding for non-language-conditioned policies.
+    # This prevents evaluation from downloading CLIP from Hugging Face.
+    lang = None
 
     env = create_env(
         env_type=env_type,

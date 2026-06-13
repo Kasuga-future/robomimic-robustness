@@ -294,12 +294,6 @@ class FlowRolloutBuffer:
                         seg_return = 1.0
 
                     seg = deepcopy(source_segment)
-                    seg["env_name"] = str(
-                        episode.get(
-                            "env_name",
-                            source_segment.get("env_name", "unknown"),
-                        )
-                    )
                     seg["source_segment_id"] = source_key
                     seg["source_segment_index"] = int(source_idx)
                     seg["original_action_mask"] = original_mask.copy()
@@ -359,19 +353,12 @@ class FlowRolloutBuffer:
 
         return self.segments
 
-    def normalize_advantages(
-        self,
-        eps=1e-6,
-        group_by_stage=True,
-        group_by_env_stage=False,
-    ):
+    def normalize_advantages(self, eps=1e-6, group_by_stage=True):
         """
-        Normalize returns within homogeneous comparison groups.
+        Normalize returns within each target-stage group.
 
-        For mixed easy / VisualDR training, ``group_by_env_stage=True`` is the
-        preferred mode. It prevents slower, harder-environment samples from
-        receiving systematically negative advantages merely because an easy
-        environment reaches the same stage faster.
+        This prevents numerous success samples from forcing valid grasp/lift
+        samples to have strongly negative global advantages.
         """
         for seg in self.segments:
             seg["advantage"] = 0.0
@@ -379,15 +366,7 @@ class FlowRolloutBuffer:
         if len(self.segments) == 0:
             return
 
-        if group_by_env_stage:
-            groups = {}
-            for idx, seg in enumerate(self.segments):
-                key = (
-                    str(seg.get("env_name", "unknown")),
-                    int(seg["credited_stage_id"]),
-                )
-                groups.setdefault(key, []).append(idx)
-        elif group_by_stage:
+        if group_by_stage:
             groups = {
                 stage_id: [
                     idx for idx, seg in enumerate(self.segments)
@@ -396,19 +375,19 @@ class FlowRolloutBuffer:
                 for stage_id in range(1, 5)
             }
         else:
-            groups = {-1: list(range(len(self.segments)))}
+            groups = {
+                -1: list(range(len(self.segments)))
+            }
 
         for indices in groups.values():
             if len(indices) == 0:
                 continue
-
             returns = np.asarray(
                 [self.segments[idx]["return"] for idx in indices],
                 dtype=np.float32,
             )
             mean = float(returns.mean())
             std = float(returns.std())
-
             if std <= float(eps):
                 for idx in indices:
                     self.segments[idx]["advantage"] = 0.0
@@ -419,7 +398,6 @@ class FlowRolloutBuffer:
                 self.segments[idx]["advantage"] = float(
                     (float(value) - mean) / denom
                 )
-
 
     def compute_weights(
         self,

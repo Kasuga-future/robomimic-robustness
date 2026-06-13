@@ -1,7 +1,7 @@
 {
     "algo_name": "flow_rwr",
     "experiment": {
-        "name": "square_flow_rwr_train_visualdr",
+        "name": "final_square_flow_rwr_v2_curriculum",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -21,32 +21,37 @@
         "epoch_every_n_steps": 100,
         "validation_epoch_every_n_steps": 10,
         "env": null,
-        "additional_envs": [
-            "NutAssemblySquareColorPerturb",
-            "NutAssemblySquareCameraPerturb",
-            "NutAssemblySquareVisualOOD"
-        ],
+        "additional_envs": null,
         "render": false,
-        "render_video": true,
-        "keep_all_videos": true,
+        "render_video": false,
+        "keep_all_videos": false,
         "video_skip": 5,
         "rollout": {
             "enabled": false,
-            "n": 25,
+            "n": 0,
             "horizon": 400,
-            "rate": 50,
-            "warmstart": 100,
+            "rate": 0,
+            "warmstart": 0,
             "terminate_on_success": true
         },
         "env_meta_update_dict": {},
         "ckpt_path": null
     },
     "train": {
-        "data": "datasets/square/ph/image_v15.hdf5",
-        "output_dir": "./final_square_flow_rwr_logs",
+        "data": [
+            {
+                "path": "datasets/square/ph/image_v15.hdf5",
+                "weight": 0.6
+            },
+            {
+                "path": "datasets/square/ph/image_v15_train_visualdr.hdf5",
+                "weight": 0.4
+            }
+        ],
+        "output_dir": "./square_flow_rwr_v2_curriculum_logs",
         "normalize_weights_by_ds_size": false,
-        "num_data_workers": 0,
-        "hdf5_cache_mode": "all",
+        "num_data_workers": 4,
+        "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
         "hdf5_load_next_obs": false,
         "hdf5_normalize_obs": false,
@@ -71,22 +76,68 @@
         },
         "goal_mode": null,
         "cuda": true,
-        "batch_size": 128,
-        "num_epochs": 300,
+        "batch_size": 512,
+        "num_epochs": 200,
         "seed": 1,
         "max_grad_norm": 1.0,
         "online": {
             "checkpoint_path": null,
-            "env_name": "NutAssemblySquareTrainVisualDR",
+            "env_name": "NutAssemblySquare",
             "num_iters": 200,
-            "num_rollout_episodes_per_iter": 10,
-            "num_train_steps_per_iter": 100,
+            "num_rollout_episodes_per_iter": 32,
+            "num_rollout_workers": 16,
+            "num_rollout_envs": 16,
+            "num_online_epochs_per_iter": 4,
+            "demo_only_steps_when_no_online": 2,
+            "num_train_steps_per_iter": 16,
             "rollout_horizon": 400,
             "terminate_on_success": true,
             "demo_batch_ratio": 0.5,
-            "eval_interval": 10,
-            "save_interval": 10,
-            "num_eval_episodes": 10
+            "eval_interval": 0,
+            "save_interval": 25,
+            "num_eval_episodes": 0,
+            "environment_curriculum": {
+                "enabled": true,
+                "easy_env": "NutAssemblySquare",
+                "hard_env": "NutAssemblySquareTrainVisualDR",
+                "phases": [
+                    {
+                        "name": "warm_mixed_75easy_25hard",
+                        "start_epoch": 1,
+                        "end_epoch": 25,
+                        "easy_workers": 12,
+                        "hard_workers": 4
+                    },
+                    {
+                        "name": "balanced_50easy_50hard",
+                        "start_epoch": 26,
+                        "end_epoch": 75,
+                        "easy_workers": 8,
+                        "hard_workers": 8
+                    },
+                    {
+                        "name": "hard_majority_25easy_75hard",
+                        "start_epoch": 76,
+                        "end_epoch": 125,
+                        "easy_workers": 4,
+                        "hard_workers": 12
+                    },
+                    {
+                        "name": "hard_dominant_12easy_88hard",
+                        "start_epoch": 126,
+                        "end_epoch": 175,
+                        "easy_workers": 2,
+                        "hard_workers": 14
+                    },
+                    {
+                        "name": "full_visualdr",
+                        "start_epoch": 176,
+                        "end_epoch": 200,
+                        "easy_workers": 0,
+                        "hard_workers": 16
+                    }
+                ]
+            }
         }
     },
     "algo": {
@@ -94,12 +145,12 @@
             "policy": {
                 "optimizer_type": "adamw",
                 "learning_rate": {
-                    "initial": 0.0001,
+                    "initial": 1e-05,
                     "decay_factor": 0.1,
                     "step_every_batch": true,
                     "scheduler_type": "cosine",
                     "num_cycles": 0.5,
-                    "warmup_steps": 500,
+                    "warmup_steps": 200,
                     "epoch_schedule": []
                 },
                 "regularization": {
@@ -114,11 +165,11 @@
         },
         "unet": {
             "enabled": true,
-            "diffusion_step_embed_dim": 384,
+            "diffusion_step_embed_dim": 256,
             "down_dims": [
-                384,
-                768,
-                1536
+                256,
+                512,
+                1024
             ],
             "kernel_size": 5,
             "n_groups": 8
@@ -129,20 +180,72 @@
         },
         "flow": {
             "num_train_timesteps": 100,
-            "num_inference_steps": 100,
+            "num_inference_steps": 20,
             "solver": "euler"
         },
         "rwr": {
             "gamma": 0.99,
-            "reward_temperature": 1.0,
-            "min_weight": 0.0,
-            "max_weight": 5.0,
-            "topk_fraction": 0.5,
-            "lambda_online": 1.0,
+            "reward_temperature": 2.0,
+            "min_weight": 0.05,
+            "max_weight": 6.0,
+            "topk_fraction": 1.0,
+            "lambda_online": 0.2,
             "use_staged_reward": true,
             "use_segment_level_weighting": true,
+            "group_advantages_by_stage": true,
             "success_bonus": 5.0,
-            "advantage_eps": 1e-06
+            "grasp_bonus": 1.0,
+            "lift_bonus": 1.0,
+            "hover_bonus": 1.0,
+            "stable_grasp_steps": 3,
+            "stable_hover_steps": 3,
+            "grasp_threshold": 0.3,
+            "lift_threshold": 0.4,
+            "hover_threshold": 0.6,
+            "use_geometric_hover": true,
+            "hover_xy_threshold": 0.05,
+            "advantage_eps": 1e-06,
+            "curriculum": {
+                "enabled": true,
+                "schedule": "cosine",
+                "decay_iters": 200,
+                "early_stage_weights": {
+                    "stable_grasp": 1.0,
+                    "lift": 2.5,
+                    "hover": 1.5,
+                    "success": 3.0
+                },
+                "late_stage_weights": {
+                    "stable_grasp": 0.2,
+                    "lift": 0.6,
+                    "hover": 2.0,
+                    "success": 4.0
+                }
+            },
+            "group_advantages_by_env_stage": true,
+            "adaptive_stage_curriculum": {
+                "enabled": true,
+                "ema_beta": 0.9,
+                "prior_success": 2.0,
+                "prior_failure": 2.0,
+                "deficit_gamma": 1.5,
+                "strength": 1.25,
+                "min_multiplier": 0.7,
+                "max_multiplier": 1.8,
+                "min_focus_episodes": 4,
+                "min_priorities": {
+                    "stable_grasp": 0.15,
+                    "lift": 0.3,
+                    "hover": 0.5,
+                    "success": 1.0
+                },
+                "max_priorities": {
+                    "stable_grasp": 2.0,
+                    "lift": 4.5,
+                    "hover": 5.0,
+                    "success": 6.0
+                }
+            }
         }
     },
     "observation": {

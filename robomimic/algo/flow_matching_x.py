@@ -2,8 +2,8 @@
 Flow Matching Policy with x-prediction.
 
 This variant uses the same straight-line interpolation path as flow_matching.py,
-and parameterizes the velocity field through a clean action trajectory x_0
-prediction.
+but trains the network to predict the clean action trajectory x_0 instead of
+the path velocity.
 """
 import torch
 import torch.nn.functional as F
@@ -27,14 +27,12 @@ def algo_config_to_class(algo_config):
 
 class FlowMatchingXPolicyUNet(FlowMatchingPolicyUNet):
     """
-    Flow Matching where the UNet predicts clean actions x_0 and the loss is
-    applied to the implied path velocity.
+    Flow Matching where the UNet predicts clean actions x_0.
 
     Training:
         x_t = (1 - t) * noise + t * actions
         x_pred = model(x_t, t, obs_cond)
-        v_pred = (x_pred - x_t) / (1 - t)
-        loss = MSE(v_pred, actions - noise)
+        loss = MSE(x_pred, actions)
 
     Inference:
         Convert x-prediction into the corresponding velocity field:
@@ -75,23 +73,15 @@ class FlowMatchingXPolicyUNet(FlowMatchingPolicyUNet):
 
             x_t = (1.0 - t_expand) * noise + t_expand * actions
 
-            v_target = actions - noise
-
             x_pred = self.nets["policy"]["noise_pred_net"](
                 x_t,
                 t,
                 global_cond=obs_cond,
             )
 
-            v_pred = self._x_pred_to_velocity(
-                x_t=x_t,
-                x_pred=x_pred,
-                t=t,
-                min_denom=1.0 / num_bins,
-            )
-            loss = F.mse_loss(v_pred, v_target)
+            loss = F.mse_loss(x_pred, actions)
 
-            losses = {"v_loss": loss}
+            losses = {"x0_loss": loss}
             info["losses"] = TensorUtils.detach(losses)
 
             if not validate:
@@ -113,7 +103,7 @@ class FlowMatchingXPolicyUNet(FlowMatchingPolicyUNet):
         Process info dictionary from @train_on_batch for logging.
         """
         log = PolicyAlgo.log_info(self, info)
-        log["Loss"] = info["losses"]["v_loss"].item()
+        log["Loss"] = info["losses"]["x0_loss"].item()
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log

@@ -10,7 +10,7 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
-from robomimic.algo.flow_matching_x import FlowMatchingXPolicyUNet
+from robomimic.algo.flow_matching import FlowMatchingPolicyUNet
 
 
 @register_algo_factory_func("flow_rwr")
@@ -20,9 +20,9 @@ def algo_config_to_class(algo_config):
     raise RuntimeError("Flow RWR requires algo.unet.enabled = True")
 
 
-class FlowRWRPolicyUNet(FlowMatchingXPolicyUNet):
+class FlowRWRPolicyUNet(FlowMatchingPolicyUNet):
     """
-    Reward-weighted online finetuning on top of the x-prediction flow policy.
+    Reward-weighted online finetuning on top of the flow-matching policy.
     """
 
     def sample_action_chunk(self, obs_dict, goal_dict=None):
@@ -64,16 +64,10 @@ class FlowRWRPolicyUNet(FlowMatchingXPolicyUNet):
 
         x_t = (1.0 - t_expand) * noise + t_expand * actions
         v_target = actions - noise
-        x_pred = self.nets["policy"]["noise_pred_net"](
+        v_pred = self.nets["policy"]["noise_pred_net"](
             x_t,
             t,
             global_cond=obs_cond,
-        )
-        v_pred = self._x_pred_to_velocity(
-            x_t=x_t,
-            x_pred=x_pred,
-            t=t,
-            min_denom=1.0 / num_bins,
         )
 
         loss_per_elem = F.mse_loss(v_pred, v_target, reduction="none").mean(dim=-1)
@@ -165,4 +159,3 @@ class FlowRWRPolicyUNet(FlowMatchingXPolicyUNet):
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log
-
